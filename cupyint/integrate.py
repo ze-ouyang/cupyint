@@ -1,0 +1,167 @@
+import cupy as cp
+import numpy as np #necessary for Gauss method
+# Method 1: Trapezoidal rule
+def trapz_integrate(func, params, bounds, num_points, boundaries):
+    """
+    Compute the integral of func, using trapezoidal rule
+    
+    Parameters:
+        func: integrand, defined by user
+        params: expected to be [[1,2,3],[1,2,3],[1,2,3],...]. each row is used together within the func 
+                for a single calculation. defined by user.
+        bounds: expected to be like [[0,1],[0,1],[0,1],...]. defined by user
+    """
+    ndim = len(bounds)  # determine nD integration
+    vector_length = params.shape[0]  # length of parameters, for further vectorized integration
+    grids = []
+    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+        grid = cp.linspace(bound[0], bound[1], num_point)
+        grids.append(grid)
+    mesh = cp.meshgrid(*grids, indexing='ij')
+    expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
+    params_expanded = [params[:, i].reshape(vector_length, *([1] * ndim)) for i in range(params.shape[1])]
+    Y = func(*expanded_mesh, params_expanded)  # unpacking
+    if boundaries is not None:
+        weight = boundaries(*expanded_mesh).astype(Y.dtype)
+        Y = Y * weight
+    for dim in reversed(range(ndim)):
+        Y = cp.trapz(Y, grids[dim], axis=dim + 1)
+    return Y
+
+# Method 2: Simpson rule
+def simpsons_rule(y, x, axis):
+    n = y.shape[axis]
+    if n % 2 == 0:
+        raise ValueError("Number of points must be odd for Simpson's rule.")
+    dx = (x[-1] - x[0]) / (n - 1)
+    coeffs = cp.ones(n, dtype=y.dtype)
+    coeffs[1:-1:2] = 4
+    coeffs[2:-1:2] = 2
+    coeffs = cp.expand_dims(coeffs, axis=tuple(range(axis)) + tuple(range(axis + 1, y.ndim)))
+    return cp.sum(y * coeffs, axis=axis) * dx / 3
+
+def simpson_integrate(func, params, bounds, num_points, boundaries):
+    ndim = len(bounds)  # determine nD integration
+    vector_length = params.shape[0]  # length of parameters, for further vectorized integration
+    grids = []
+    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+        grid = cp.linspace(bound[0], bound[1], num_point)
+        grids.append(grid)
+    mesh = cp.meshgrid(*grids, indexing='ij')
+    expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
+    params_expanded = [params[:, i].reshape(vector_length, *([1] * ndim)) for i in range(params.shape[1])]
+    Y = func(*expanded_mesh, params_expanded)  # unpacking
+    if boundaries is not None:
+        weight = boundaries(*expanded_mesh).astype(Y.dtype)
+        Y = Y * weight
+    for dim in reversed(range(ndim)):
+        Y = simpsons_rule(Y, grids[dim], axis=dim + 1)
+    return Y
+
+# Method 3: Boole's Rule
+def booles_rule(y, x, axis):
+    n = y.shape[axis]
+    if (n - 1) % 4 != 0:
+        raise ValueError("Number of points minus one must be a multiple of 4 for Boole's rule.")
+    dx = (x[-1] - x[0]) / (n - 1)
+    coeffs = cp.ones(n, dtype=y.dtype)
+    coeffs[0] = 7
+    coeffs[-1] = 7
+    coeffs[1:-1:4] = 32
+    coeffs[2:-1:4] = 12
+    coeffs[3:-1:4] = 32
+    coeffs[4:-1:4] = 14
+    coeffs = cp.expand_dims(coeffs, axis=tuple(range(axis)) + tuple(range(axis + 1, y.ndim)))
+    return cp.sum(y * coeffs, axis=axis) * 2 * dx / 45
+
+def booles_integrate(func, params, bounds, num_points, boundaries):
+    ndim = len(bounds)  # determine nD integration
+    vector_length = params.shape[0]  # length of parameters, for further vectorized integration
+    grids = []
+    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+        grid = cp.linspace(bound[0], bound[1], num_point)
+        grids.append(grid)
+    mesh = cp.meshgrid(*grids, indexing='ij')
+    expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
+    params_expanded = [params[:, i].reshape(vector_length, *([1] * ndim)) for i in range(params.shape[1])]
+    Y = func(*expanded_mesh, params_expanded)  # unpacking
+    if boundaries is not None:
+        weight = boundaries(*expanded_mesh).astype(Y.dtype)
+        Y = Y * weight
+    for dim in reversed(range(ndim)):
+        Y = booles_rule(Y, grids[dim], axis=dim + 1)
+    return Y
+
+# Method 4: Gauss-Legendre rule
+def gauss_legendre_rule(y, x, w, axis):
+    w = cp.expand_dims(w, axis=tuple(range(axis)) + tuple(range(axis + 1, y.ndim)))
+    return cp.sum(y * w, axis=axis)
+
+def gauss_legendre_nodes_weights(n):
+    nodes, weights = np.polynomial.legendre.leggauss(n)
+    nodes = cp.asarray(nodes) 
+    weights = cp.asarray(weights) 
+    return nodes, weights
+
+def gauss_integrate(func, params, bounds, num_points,boundaries):
+    ndim = len(bounds)  # determine nD integration
+    vector_length = params.shape[0]  # length of parameters, for further vectorized integration
+    grids, weights = [], []
+    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+        grid, weight = gauss_legendre_nodes_weights(num_point)
+        grid = 0.5 * (bound[1] - bound[0]) * grid + 0.5 * (bound[1] + bound[0])
+        weight = 0.5 * (bound[1] - bound[0]) * weight
+        grids.append(grid)
+        weights.append(weight)
+    mesh = cp.meshgrid(*grids, indexing='ij')
+    expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
+    params_expanded = [params[:, i].reshape(vector_length, *([1] * ndim)) for i in range(params.shape[1])]
+    Y = func(*expanded_mesh, params_expanded)
+    if boundaries is not None:
+        weight = boundaries(*expanded_mesh).astype(Y.dtype)
+        Y = Y * weight
+    for dim in reversed(range(ndim)):
+        Y = gauss_legendre_rule(Y, grids[dim], weights[dim], axis=dim + 1)
+    return Y
+
+# Method 5: Monte Carlo rule (fixed sampling points per dimension)
+def mc_integrate(func, params, bounds, num_points, boundaries):
+    vector_length = params.shape[0]
+    samples = []
+    for bound in bounds:
+        sample = cp.random.rand(vector_length, num_points) * (bound[1] - bound[0]) + bound[0]
+        samples.append(sample[..., cp.newaxis])
+    volume = 1.0
+    for bound in bounds:
+        volume *= (bound[1] - bound[0])
+    params_expanded = [params[:, i].reshape(vector_length, 1, 1) for i in range(params.shape[1])]
+    Y = func(*samples, params_expanded)
+    if boundaries is not None:
+        weight = boundaries(*samples).astype(Y.dtype)
+        Y = Y * weight
+    integral = volume * cp.mean(Y, axis=1).squeeze()
+    return integral
+
+# Method 6: Importance Sampling Monte Carlo rule (fixed sampling points per dimension)
+def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations):
+    vector_length = params.shape[0]
+    volume = 1.0
+    for bound in bounds:
+        volume *= (bound[1] - bound[0])
+    pdf = cp.ones((vector_length, num_points)) / volume
+    for _ in range(num_iterations):
+        samples = []
+        for bound in bounds:
+            sample = cp.random.rand(vector_length, num_points) * (bound[1] - bound[0]) + bound[0]
+            samples.append(sample[..., cp.newaxis])
+        params_expanded = [params[:, i].reshape(vector_length, 1, 1) for i in range(params.shape[1])]
+        Y = func(*samples, params_expanded)
+        if boundaries is not None:
+            weight = boundaries(*samples).astype(Y.dtype)
+            Y = Y * weight
+        pdf = Y / cp.sum(Y, axis=1, keepdims=True)
+        pdf = cp.clip(pdf, 1e-20, None)
+    weights = 1.0 / pdf
+    weighted_Y = Y * weights
+    integral = volume * cp.mean(weighted_Y, axis=1).squeeze() / num_points
+    return integral
