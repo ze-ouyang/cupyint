@@ -1,5 +1,26 @@
 import cupy as cp
 import numpy as np #necessary for Gauss method
+
+global GLOBAL_DTYPE
+GLOBAL_DTYPE=cp.float32
+
+def set_backend(dtype):
+    """
+    Set the default floating-point precision for cupy.
+
+    Parameters:
+        dtype (str): The desired precision, either 'float32' or 'float64'.
+    """
+    
+    if dtype not in [cp.float32, cp.float64]:
+        raise ValueError("dtype must be cp.float32 or cp.float64")
+    
+    GLOBAL_DTYPE = dtype
+    #print(f"Backend set to {dtype}.")
+    
+def get_data_type():
+    return GLOBAL_DTYPE
+
 # Method 1: Trapezoidal rule
 def trapz_integrate(func, params, bounds, num_points, boundaries):
     """
@@ -15,7 +36,7 @@ def trapz_integrate(func, params, bounds, num_points, boundaries):
     vector_length = params.shape[0]  # length of parameters, for further vectorized integration
     grids = []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
-        grid = cp.linspace(bound[0], bound[1], num_point)
+        grid = cp.linspace(bound[0], bound[1], num_point, dtype=GLOBAL_DTYPE)
         grids.append(grid)
     mesh = cp.meshgrid(*grids, indexing='ij')
     expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
@@ -45,7 +66,7 @@ def simpson_integrate(func, params, bounds, num_points, boundaries):
     vector_length = params.shape[0]  # length of parameters, for further vectorized integration
     grids = []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
-        grid = cp.linspace(bound[0], bound[1], num_point)
+        grid = cp.linspace(bound[0], bound[1], num_point, dtype=GLOBAL_DTYPE)
         grids.append(grid)
     mesh = cp.meshgrid(*grids, indexing='ij')
     expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
@@ -79,7 +100,7 @@ def booles_integrate(func, params, bounds, num_points, boundaries):
     vector_length = params.shape[0]  # length of parameters, for further vectorized integration
     grids = []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
-        grid = cp.linspace(bound[0], bound[1], num_point)
+        grid = cp.linspace(bound[0], bound[1], num_point, dtype=GLOBAL_DTYPE)
         grids.append(grid)
     mesh = cp.meshgrid(*grids, indexing='ij')
     expanded_mesh = [m[cp.newaxis, ...] for m in mesh]
@@ -99,8 +120,8 @@ def gauss_legendre_rule(y, x, w, axis):
 
 def gauss_legendre_nodes_weights(n):
     nodes, weights = np.polynomial.legendre.leggauss(n)
-    nodes = cp.asarray(nodes) 
-    weights = cp.asarray(weights) 
+    nodes = cp.asarray(nodes, dtype=GLOBAL_DTYPE)
+    weights = cp.asarray(weights, dtype=GLOBAL_DTYPE) 
     return nodes, weights
 
 def gauss_integrate(func, params, bounds, num_points,boundaries):
@@ -129,7 +150,7 @@ def mc_integrate(func, params, bounds, num_points, boundaries):
     vector_length = params.shape[0]
     samples = []
     for bound in bounds:
-        sample = cp.random.rand(vector_length, num_points) * (bound[1] - bound[0]) + bound[0]
+        sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
         samples.append(sample[..., cp.newaxis])
     volume = 1.0
     for bound in bounds:
@@ -152,7 +173,7 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
     for _ in range(num_iterations):
         samples = []
         for bound in bounds:
-            sample = cp.random.rand(vector_length, num_points) * (bound[1] - bound[0]) + bound[0]
+            sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
             samples.append(sample[..., cp.newaxis])
         params_expanded = [params[:, i].reshape(vector_length, 1, 1) for i in range(params.shape[1])]
         Y = func(*samples, params_expanded)
