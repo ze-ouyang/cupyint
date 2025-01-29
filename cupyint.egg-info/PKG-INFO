@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: cupyint
-Version: 0.1.5
+Version: 0.1.6
 Summary: A CuPy-based numerical integration library
 Home-page: https://github.com/ze-ouyang/cupyint
 Author: Ze Ouyang
