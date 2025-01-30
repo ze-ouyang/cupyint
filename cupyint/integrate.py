@@ -222,7 +222,7 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
         for _ in range(num_iterations):
             samples = []
             for bound in bounds:
-                sample = cp.random.rand(vector_length, num_points, dtype=data_type) * (bound[1] - bound[0]) + bound[0]
+                sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
                 samples.append(sample[..., cp.newaxis])
             params_expanded = [params[:, i].reshape(vector_length, 1, 1) for i in range(params.shape[1])]
             Y = func(*samples, params_expanded)
@@ -239,7 +239,7 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
         for _ in range(num_iterations):
             samples = []
             for bound in bounds:
-                sample = cp.random.rand(vector_length, num_points, dtype=data_type) * (bound[1] - bound[0]) + bound[0]
+                sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
                 samples.append(sample[..., cp.newaxis])
             Y = func(*samples)
             if boundaries is not None:
