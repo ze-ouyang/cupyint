@@ -222,18 +222,14 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
         for _ in range(num_iterations):
             samples = []
             for bound in bounds:
-                sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
+                sample = cp.random.rand(vector_length, num_points, dtype=data_type) * (bound[1] - bound[0]) + bound[0]
                 samples.append(sample[..., cp.newaxis])
             params_expanded = [params[:, i].reshape(vector_length, 1, 1) for i in range(params.shape[1])]
             Y = func(*samples, params_expanded)
             if boundaries is not None:
                 weight = boundaries(*samples).astype(Y.dtype)
                 Y = Y * weight
-            pdf = Y / cp.sum(Y, axis=1, keepdims=True)
-            pdf = cp.clip(pdf, 1e-20, None)
-        weights = 1.0 / pdf
-        weighted_Y = Y * weights
-        integral = volume * cp.mean(weighted_Y, axis=1).squeeze() / num_points
+        integral = volume * cp.mean(Y, axis=1).squeeze() 
     if params is None:
         vector_length = 1
         volume = 1.0
@@ -243,15 +239,11 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
         for _ in range(num_iterations):
             samples = []
             for bound in bounds:
-                sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
+                sample = cp.random.rand(vector_length, num_points, dtype=data_type) * (bound[1] - bound[0]) + bound[0]
                 samples.append(sample[..., cp.newaxis])
             Y = func(*samples)
             if boundaries is not None:
                 weight = boundaries(*samples).astype(Y.dtype)
                 Y = Y * weight
-            pdf = Y / cp.sum(Y, axis=1, keepdims=True)
-            pdf = cp.clip(pdf, 1e-20, None)
-        weights = 1.0 / pdf
-        weighted_Y = Y * weights
-        integral = volume * cp.mean(weighted_Y, axis=1).squeeze() / num_points
+        integral = volume * cp.mean(Y, axis=1).squeeze() 
     return integral

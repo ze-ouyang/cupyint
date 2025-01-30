@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cupyint",  
-    version="0.1.6", 
+    version="0.1.7", 
     author="Ze Ouyang", 
     author_email="ze_ouyang@utexas.edu",  
     description="A CuPy-based numerical integration library", 
