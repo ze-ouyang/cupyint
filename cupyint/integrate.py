@@ -1,7 +1,6 @@
 import cupy as cp
 import numpy as np #necessary for Gauss method
 
-global GLOBAL_DTYPE
 GLOBAL_DTYPE=cp.float32
 
 def set_backend(dtype):
@@ -15,6 +14,7 @@ def set_backend(dtype):
     if dtype not in [cp.float32, cp.float64]:
         raise ValueError("dtype must be cp.float32 or cp.float64")
     
+    global GLOBAL_DTYPE
     GLOBAL_DTYPE = dtype
     #print(f"Backend set to {dtype}.")
     
@@ -32,6 +32,7 @@ def trapz_integrate(func, params, bounds, num_points, boundaries):
                 for a single calculation. defined by user.
         bounds: expected to be like [[0,1],[0,1],[0,1],...]. defined by user
     """
+    global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids = []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
@@ -70,6 +71,7 @@ def simpsons_rule(y, x, axis):
     return cp.sum(y * coeffs, axis=axis) * dx / 3
 
 def simpson_integrate(func, params, bounds, num_points, boundaries):
+    global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids = []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
@@ -113,6 +115,7 @@ def booles_rule(y, x, axis):
     return cp.sum(y * coeffs, axis=axis) * 2 * dx / 45
 
 def booles_integrate(func, params, bounds, num_points, boundaries):
+    global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids = []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
@@ -150,6 +153,7 @@ def gauss_legendre_nodes_weights(n):
     return nodes, weights
 
 def gauss_integrate(func, params, bounds, num_points,boundaries):
+    global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids, weights = [], []
     for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
@@ -180,6 +184,7 @@ def gauss_integrate(func, params, bounds, num_points,boundaries):
 
 # Method 5: Monte Carlo rule (fixed sampling points per dimension)
 def mc_integrate(func, params, bounds, num_points, boundaries):
+    global GLOBAL_DTYPE
     if params is not None:
         vector_length = params.shape[0]
         samples = []
@@ -213,6 +218,7 @@ def mc_integrate(func, params, bounds, num_points, boundaries):
 
 # Method 6: Importance Sampling Monte Carlo rule (fixed sampling points per dimension)
 def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations):
+    global GLOBAL_DTYPE
     if params is not None:
         vector_length = params.shape[0]
         volume = 1.0
@@ -222,7 +228,7 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
         for _ in range(num_iterations):
             samples = []
             for bound in bounds:
-                sample = cp.random.rand(vector_length, num_points, dtype=data_type) * (bound[1] - bound[0]) + bound[0]
+                sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
                 samples.append(sample[..., cp.newaxis])
             params_expanded = [params[:, i].reshape(vector_length, 1, 1) for i in range(params.shape[1])]
             Y = func(*samples, params_expanded)
@@ -239,7 +245,7 @@ def adpmc_integrate(func, params, bounds, num_points, boundaries, num_iterations
         for _ in range(num_iterations):
             samples = []
             for bound in bounds:
-                sample = cp.random.rand(vector_length, num_points, dtype=data_type) * (bound[1] - bound[0]) + bound[0]
+                sample = cp.random.rand(vector_length, num_points, dtype=GLOBAL_DTYPE) * (bound[1] - bound[0]) + bound[0]
                 samples.append(sample[..., cp.newaxis])
             Y = func(*samples)
             if boundaries is not None:
