@@ -10,14 +10,14 @@ def set_backend(dtype):
     Parameters:
         dtype (str): The desired precision, either 'float32' or 'float64'.
     """
-    
+
     if dtype not in [cp.float32, cp.float64]:
         raise ValueError("dtype must be cp.float32 or cp.float64")
-    
+
     global GLOBAL_DTYPE
     GLOBAL_DTYPE = dtype
     #print(f"Backend set to {dtype}.")
-    
+
 def get_data_type():
     return GLOBAL_DTYPE
 
@@ -25,7 +25,7 @@ def get_data_type():
 def trapz_integrate(func, params, bounds, num_points, boundaries):
     """
     Compute the integral of func, using trapezoidal rule
-    
+
     Parameters:
         func: integrand, defined by user
         params: expected to be [[1,2,3],[1,2,3],[1,2,3],...]. each row is used together within the func 
@@ -35,7 +35,7 @@ def trapz_integrate(func, params, bounds, num_points, boundaries):
     global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids = []
-    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+    for bound, num_point in zip(bounds, num_points):
         grid = cp.linspace(bound[0], bound[1], num_point, dtype=GLOBAL_DTYPE)
         grids.append(grid)
     mesh = cp.meshgrid(*grids, indexing='ij')
@@ -74,7 +74,7 @@ def simpson_integrate(func, params, bounds, num_points, boundaries):
     global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids = []
-    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+    for bound, num_point in zip(bounds, num_points):
         grid = cp.linspace(bound[0], bound[1], num_point, dtype=GLOBAL_DTYPE)
         grids.append(grid)
     mesh = cp.meshgrid(*grids, indexing='ij')
@@ -118,7 +118,7 @@ def booles_integrate(func, params, bounds, num_points, boundaries):
     global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids = []
-    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+    for bound, num_point in zip(bounds, num_points):
         grid = cp.linspace(bound[0], bound[1], num_point, dtype=GLOBAL_DTYPE)
         grids.append(grid)
     mesh = cp.meshgrid(*grids, indexing='ij')
@@ -156,7 +156,7 @@ def gauss_integrate(func, params, bounds, num_points,boundaries):
     global GLOBAL_DTYPE
     ndim = len(bounds)  # determine nD integration
     grids, weights = [], []
-    for i, (bound, num_point) in enumerate(zip(bounds, num_points)):
+    for bound, num_point in zip(bounds, num_points):
         grid, weight = gauss_legendre_nodes_weights(num_point)
         grid = 0.5 * (bound[1] - bound[0]) * grid + 0.5 * (bound[1] + bound[0])
         weight = 0.5 * (bound[1] - bound[0]) * weight
